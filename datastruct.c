@@ -7,7 +7,7 @@ void vector_init(struct vector *v)
     v->count = 0;
 } 
 
-void vector_add(struct vector *v, struct pair_ii *p) 
+void vector_add(struct vector *v,void *p) 
 { 
     if(v->size == 0) 
     { 

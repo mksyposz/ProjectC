@@ -124,7 +124,7 @@ struct node *move2(struct node* board, int x, int player)
     return move1(board,x,player); 
 } 
 
-struct node *add_left_column(struct node* board) 
+struct node *add_right_column(struct node* board) 
 { 
     int h = 0; 
     while(board->up != NULL) 
@@ -150,7 +150,7 @@ struct node *add_left_column(struct node* board)
     return board;
 }
 
-struct node *add_right_column(struct node* board) 
+struct node *add_left_column(struct node* board) 
 { 
     int h = 0; 
     while(board->up != NULL) 

@@ -1,6 +1,10 @@
 #include<gtk/gtk.h>
 #include<stdbool.h>
 #include<string.h>
+#include<stdlib.h>
+#include<time.h>
+
+int EXIT_CODE;
 
 struct menu_choices
 { 
@@ -28,7 +32,6 @@ void problem_text(GtkWidget*,struct menu_choices*,int);
 
 void exit_load_play_buttons(GtkWidget*,struct menu_choices*,int);
 void check_conditions(GtkWidget *widget, struct menu_choices*); 
-
 void menu_set_marks(GtkWidget*,struct menu_choices*,int); 
 
 void mark_choice_change_player11(GtkWidget*, struct menu_choices*);
@@ -40,6 +43,8 @@ void load_button_action(GtkWidget*,struct menu_choices*);
 
 int main(int argc, char *argv[]) 
 { 
+    EXIT_CODE = 1;
+    srand(time(0));
     gtk_init(&argc,&argv); 
     
     //GTK window creation:
@@ -68,11 +73,12 @@ int main(int argc, char *argv[])
 
     gtk_widget_show_all(window); 
     gtk_main();
+    return EXIT_CODE;
 }
 
 void menu_set_title(GtkWidget *grid,int row)
 { 
-    GtkWidget *title = gtk_label_new(" <span size='20000'> MENU </span>"); 
+    GtkWidget *title = gtk_label_new("<span size='20000'> MENU </span>"); 
     gtk_label_set_use_markup(GTK_LABEL(title),TRUE);
     gtk_grid_attach(GTK_GRID(grid),title,1,row,1,1);
 
@@ -218,7 +224,6 @@ void exit_load_play_buttons(GtkWidget *grid, struct menu_choices *X, int row)
     GtkWidget *play_button = gtk_button_new_with_label("PLAY");
     g_signal_connect(G_OBJECT(play_button), "clicked", G_CALLBACK(check_conditions),(gpointer)X); 
     gtk_container_add(GTK_CONTAINER(button_box),play_button);
-
 } 
 
 void check_conditions(GtkWidget *widget, struct menu_choices *X) 
@@ -260,8 +265,14 @@ void check_conditions(GtkWidget *widget, struct menu_choices *X)
     { 
         FILE *cfg; 
         cfg = fopen(".config","w");
+        if(X->pressed[2] == X->pressed[3]) 
+        { 
+            X->pressed[2] = rand()%2; 
+            X->pressed[3] = 1 - rand()%2;
+        } 
         fprintf(cfg,"0 %d %d %d %d\n",X->pressed[0],X->pressed[1],X->pressed[2],X->pressed[3]);
         fclose(cfg); 
+        EXIT_CODE = 0;
         gtk_widget_destroy(GTK_WIDGET(X->win));
     } 
 } 

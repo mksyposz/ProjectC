@@ -12,11 +12,11 @@ struct pair_ii
 
 struct vector
 { 
-    struct pair_ii **data;
+    void **data;
     int count; 
     int size;
 }; 
 
 void vector_init(struct vector*); 
-void vector_add(struct vector*,struct pair_ii*);
+void vector_add(struct vector*,void *);
 #endif

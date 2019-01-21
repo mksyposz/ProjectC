@@ -1,6 +1,5 @@
 #include"board.h"
 
-
 struct node *init(int size, int win_condition) 
 { 
     struct node *prev = NULL; 
@@ -59,6 +58,7 @@ struct node *add_row(struct node* board)
         new_node->next = NULL; 
         new_node->up = NULL;
         new_node->down = curr;
+        new_node->prev = NULL;
         curr->up = new_node;
         if(curr->prev != NULL) 
         { 

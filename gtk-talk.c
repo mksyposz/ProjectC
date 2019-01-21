@@ -108,6 +108,9 @@ void game_config()
 
 static void zakoncz(GtkWidget *widget, gpointer data)
 {
+    char buf[5]; 
+    sprintf(buf,"0"); 
+    send_move(buf);
     closePipes(potoki);
     gtk_main_quit();
 }
@@ -179,7 +182,7 @@ void board_to_grid(struct game *G)
 
 void game_move1(GtkWidget *widget,struct move_button *X)
 { 
-    move1(X->G->board,X->x,player);
+    X->G->board = move1(X->G->board,X->x,player);
     char buf[200]; 
     sprintf(buf,"1%d",X->x);
     send_move(buf);
@@ -200,7 +203,7 @@ void game_move1(GtkWidget *widget,struct move_button *X)
 
 void game_move2(GtkWidget *widget, struct move_button *X) 
 { 
-    move2(X->G->board,X->x,player); 
+    X->G->board = move2(X->G->board,X->x,player); 
     char buf[200]; 
     for(int i = 0; i < 200; i++) buf[i] = '\0';
     sprintf(buf,"2%d",X->x);
@@ -243,7 +246,11 @@ static gboolean get_move(gpointer data)
 { 
     char buf[25];
     getStringFromPipe(potoki,buf,25); 
-    if(buf[0] == '1' || buf[0] == '2') 
+    if(buf[0] == '0') 
+    { 
+        zakoncz(NULL,NULL);
+    } 
+    else if(buf[0] == '1' || buf[0] == '2') 
     { 
         int pos = 0; 
         int id = 1; 
@@ -255,7 +262,7 @@ static gboolean get_move(gpointer data)
         } 
         if(buf[0] == '1') 
         { 
-            move1(GAME->board,pos,1-player);
+            GAME->board = move1(GAME->board,pos,1-player);
             board_to_grid(GAME); 
             if(check_win(GAME->board,pos) == player) 
             {
@@ -270,7 +277,7 @@ static gboolean get_move(gpointer data)
         } 
         else if(buf[0] == '2')
         { 
-            move2(GAME->board,pos,1-player);
+            GAME->board = move2(GAME->board,pos,1-player);
             board_to_grid(GAME); 
             if(check_win(GAME->board,pos) == player) 
             {

@@ -109,7 +109,7 @@ void game_config()
 static void zakoncz(GtkWidget *widget, gpointer data)
 {
     char buf[5]; 
-    sprintf(buf,"0"); 
+    sprintf(buf,"-"); 
     send_move(buf);
     closePipes(potoki);
     gtk_main_quit();
@@ -246,7 +246,7 @@ static gboolean get_move(gpointer data)
 { 
     char buf[25];
     getStringFromPipe(potoki,buf,25); 
-    if(buf[0] == '0') 
+    if(buf[0] == '-') 
     { 
         zakoncz(NULL,NULL);
     } 

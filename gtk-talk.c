@@ -109,7 +109,7 @@ void game_config()
 static void zakoncz(GtkWidget *widget, gpointer data)
 {
     char buf[5]; 
-    sprintf(buf,"0"); 
+    sprintf(buf,"-"); 
     send_move(buf);
     closePipes(potoki);
     gtk_main_quit();
@@ -225,14 +225,14 @@ void game_move2(GtkWidget *widget, struct move_button *X)
 
 void game_add_left(GtkWidget *widget, struct game *G)
 { 
-    add_left_column(G->board);
+    G->board = add_left_column(G->board);
     send_move("3");
     board_to_grid(G);
 } 
 
 void game_add_right(GtkWidget *widget,struct game *G)
 { 
-    add_right_column(G->board); 
+    G->board = add_right_column(G->board); 
     send_move("4");
     board_to_grid(G);
 } 
@@ -246,7 +246,7 @@ static gboolean get_move(gpointer data)
 { 
     char buf[25];
     getStringFromPipe(potoki,buf,25); 
-    if(buf[0] == '0') 
+    if(buf[0] == '-') 
     { 
         zakoncz(NULL,NULL);
     } 
@@ -295,12 +295,12 @@ static gboolean get_move(gpointer data)
     } 
     else if(buf[0] == '3') 
     { 
-        add_left_column(GAME->board); 
+        GAME->board = add_left_column(GAME->board); 
         board_to_grid(GAME);
     } 
     else if(buf[0] == '4') 
     { 
-        add_right_column(GAME->board); 
+        GAME->board = add_right_column(GAME->board); 
         board_to_grid(GAME);
     } 
     return TRUE;

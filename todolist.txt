@@ -1,1 +1,0 @@
-- Add a way to store game's parameters when closing menu. 

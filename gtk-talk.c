@@ -2,6 +2,8 @@
 #include<stdlib.h>
 #include<math.h>
 #include<gtk/gtk.h>
+#include<sys/types.h>
+#include<sys/stat.h>
 #include"fifo.h"
 #include"datastruct.h"
 #include"board.h"
@@ -9,7 +11,7 @@
 static GtkWidget *window; 
 static PipesPtr potoki; 
 static char *m_id, *y_id;
-int player;
+int player, loaded;
 
 struct game
 { 
@@ -46,6 +48,8 @@ void game_config();
 
 void send_move(); 
 static gboolean get_move(gpointer data);
+void save_button(GtkWidget *widget);
+void block_buttons();
 
 int main(int argc, char *argv[]) 
 { 
@@ -73,8 +77,10 @@ int main(int argc, char *argv[])
     vector_init(GAME->v); 
     GAME->grid = grid;
     board_to_grid(GAME);
-    if(player == 1)
-        gtk_widget_set_sensitive(GAME->grid,FALSE);
+    if(loaded == -1 && player == 1)
+        block_buttons();
+    else if(loaded != player && loaded != -1)  
+        block_buttons();
     g_timeout_add(100,get_move,NULL);
     gtk_widget_show_all(window);
     gtk_main();
@@ -89,7 +95,7 @@ void game_config()
     int type;
     fscanf(fptr,"%d",&type);
     if(type == 0) 
-    { 
+    {
         int t[4]; 
         fscanf(fptr,"%d%d%d%d",&t[0],&t[1],&t[2],&t[3]);
         int size = 0; 
@@ -99,29 +105,67 @@ void game_config()
         if(t[0] == 2) size = 10;
         if(t[1] == 0) diff = 4; 
         if(t[1] == 1) diff = 5;
-        GAME->board = init(size,diff);
-        if(m_id[0] == 'A') player = t[2]; 
+        GAME->board = init(size,size,diff);
+        if(m_id[0] == 'A') player = t[2];
         else player = t[3];
+        loaded = -1;
+    }
+    if(type == 1)
+    { 
+        char s[1000]; 
+        fscanf(fptr,"%s",s);
+        FILE *load = fopen(s,"r"); 
+        int p;
+        fscanf(load,"%d%d",&p,&loaded); 
+
+        if (m_id[0] == 'A')
+            player = p; 
+        else 
+            player = 1-p;
+        fclose(load);
+        GAME->board = init(5,5,4);
+        GAME->board = load_board(s);
     } 
     fclose(fptr);
 } 
 
 static void zakoncz(GtkWidget *widget, gpointer data)
 {
-    char buf[5]; 
-    sprintf(buf,"-"); 
-    send_move(buf);
     closePipes(potoki);
     gtk_main_quit();
 }
 
 void board_to_grid(struct game *G)
-{ 
+{
+    //reset grid
     for(int i = 0; i < G->v->count; i++) 
         gtk_container_remove(GTK_CONTAINER(G->grid),G->v->data[i]); 
     G->v->count = 0;
+    
     int W = width(G->board); 
-    int H = height(G->board); 
+    int H = height(G->board);
+    
+    //board menu button
+    GtkWidget *men = gtk_menu_new();
+    GtkWidget *saveandexit = gtk_menu_item_new_with_label("Save & Exit"); 
+    GtkWidget *exit = gtk_menu_item_new_with_label("Exit");
+    
+    gtk_menu_shell_append(GTK_MENU_SHELL(men),saveandexit); 
+    gtk_menu_shell_append(GTK_MENU_SHELL(men),exit); 
+
+    g_signal_connect(G_OBJECT(saveandexit),"activate",G_CALLBACK(save_button),NULL);
+    g_signal_connect(G_OBJECT(exit),"activate",G_CALLBACK(zakoncz),NULL);
+
+    GtkWidget *m_button = gtk_menu_button_new(); 
+    gtk_menu_button_set_popup(GTK_MENU_BUTTON(m_button),men);
+    gtk_menu_button_set_direction(GTK_MENU_BUTTON(m_button),GTK_ARROW_RIGHT);
+    gtk_grid_attach(GTK_GRID(G->grid),m_button,W+1,0,1,1);
+
+    gtk_widget_show(saveandexit); 
+    gtk_widget_show(exit);
+    vector_add(G->v,m_button);
+    
+    //board to grid
     for(int i = 1; i <= W; i++) 
     { 
         GtkWidget *button = gtk_button_new();
@@ -129,18 +173,26 @@ void board_to_grid(struct game *G)
         K->G = G; 
         K->x = i-1;
         gtk_grid_attach(GTK_GRID(G->grid),button,i,0,1,1);
+        GtkWidget *image = gtk_image_new_from_file("marks/arrowdown.png");
+        gtk_button_set_image(GTK_BUTTON(button),image);
         g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(game_move1),(gpointer)K);
         vector_add(G->v,button);
     } 
 
-    GtkWidget *button_left = gtk_button_new(); 
+    GtkWidget *image_plus1 = gtk_image_new_from_file("marks/plus.png");
+    GtkWidget *image_plus2 = gtk_image_new_from_file("marks/plus.png");
+    
+    GtkWidget *button_left = gtk_button_new();
+    gtk_button_set_image(GTK_BUTTON(button_left),image_plus1); 
     gtk_grid_attach(GTK_GRID(G->grid),button_left,0,H,1,1); 
     g_signal_connect(G_OBJECT(button_left),"clicked",G_CALLBACK(game_add_left),(gpointer)G);
     vector_add(G->v,button_left);
 
     GtkWidget *button_right = gtk_button_new();
+    gtk_button_set_image(GTK_BUTTON(button_right),image_plus2);
     gtk_grid_attach(GTK_GRID(G->grid),button_right,W+1,H,1,1);
     g_signal_connect(G_OBJECT(button_right),"clicked",G_CALLBACK(game_add_right),(gpointer)G);
+
     vector_add(G->v,button_right);
     
     while(G->board->up != NULL) G->board = G->board->up;
@@ -149,8 +201,8 @@ void board_to_grid(struct game *G)
         for(int j = 1; j <= W; j++) 
         { 
             GtkWidget *label; 
-            if(G->board->val == 0) label = gtk_label_new("x");
-            else if(G->board->val == 1) label = gtk_label_new("o"); 
+            if(G->board->val == 0) label = gtk_image_new_from_file("marks/x.png");
+            else if(G->board->val == 1) label = gtk_image_new_from_file("marks/o.png"); 
             else label = gtk_label_new(" ");
             vector_add(G->v,label);
             gtk_grid_attach(GTK_GRID(G->grid),label,j,i,1,1);
@@ -168,6 +220,8 @@ void board_to_grid(struct game *G)
             struct move_button *K = malloc(sizeof(struct move_button)); 
             K->G = G; 
             K->x = i-1;
+            GtkWidget *image = gtk_image_new_from_file("marks/arrowup.png"); 
+            gtk_button_set_image(GTK_BUTTON(wid),image);
             g_signal_connect(G_OBJECT(wid),"clicked",G_CALLBACK(game_move2),(gpointer)K);
         } 
         else 
@@ -186,8 +240,9 @@ void game_move1(GtkWidget *widget,struct move_button *X)
     char buf[200]; 
     sprintf(buf,"1%d",X->x);
     send_move(buf);
-    gtk_widget_set_sensitive(X->G->grid,FALSE);
     board_to_grid(GAME);
+    block_buttons();
+
     if(check_win(GAME->board,X->x) == player) 
     {
         pokazBlad("Wygrales");
@@ -197,8 +252,12 @@ void game_move1(GtkWidget *widget,struct move_button *X)
     { 
         pokazBlad("Przegrales"); 
         zakoncz(NULL,NULL);
+    }
+    else if(check_win(GAME->board,X->x) == 2) 
+    { 
+        pokazBlad("Remis"); 
+        zakoncz(NULL,NULL);
     } 
-   
 } 
 
 void game_move2(GtkWidget *widget, struct move_button *X) 
@@ -208,9 +267,9 @@ void game_move2(GtkWidget *widget, struct move_button *X)
     for(int i = 0; i < 200; i++) buf[i] = '\0';
     sprintf(buf,"2%d",X->x);
     send_move(buf);
-    gtk_widget_set_sensitive(X->G->grid,FALSE);
     board_to_grid(GAME);
-
+    block_buttons();
+    
     if(check_win(GAME->board,X->x) == player) 
     {
         pokazBlad("Wygrales");
@@ -221,7 +280,12 @@ void game_move2(GtkWidget *widget, struct move_button *X)
         pokazBlad("Przegrales"); 
         zakoncz(NULL,NULL);
     } 
-    } 
+    else if(check_win(GAME->board,X->x) == 2) 
+    { 
+        pokazBlad("Remis"); 
+        zakoncz(NULL,NULL);
+    }
+} 
 
 void game_add_left(GtkWidget *widget, struct game *G)
 { 
@@ -246,11 +310,7 @@ static gboolean get_move(gpointer data)
 { 
     char buf[25];
     getStringFromPipe(potoki,buf,25); 
-    if(buf[0] == '-') 
-    { 
-        zakoncz(NULL,NULL);
-    } 
-    else if(buf[0] == '1' || buf[0] == '2') 
+    if(buf[0] == '1' || buf[0] == '2') 
     { 
         int pos = 0; 
         int id = 1; 
@@ -273,6 +333,11 @@ static gboolean get_move(gpointer data)
             { 
                 pokazBlad("Przegrales"); 
                 zakoncz(NULL,NULL);
+            }
+            else if(check_win(GAME->board,pos) == 2) 
+            { 
+                pokazBlad("Remis"); 
+                zakoncz(NULL,NULL);
             } 
         } 
         else if(buf[0] == '2')
@@ -289,9 +354,16 @@ static gboolean get_move(gpointer data)
                 pokazBlad("Przegrales"); 
                 zakoncz(NULL,NULL);
             } 
-            if(check_win(GAME->board,pos) != -1) zakoncz(NULL,NULL);
+            else if(check_win(GAME->board,pos) == 2) 
+            { 
+                pokazBlad("Remis"); 
+                zakoncz(NULL,NULL);
+            } 
+            //if(check_win(GAME->board,pos) != -1) zakoncz(NULL,NULL);
         } 
-        gtk_widget_set_sensitive(GAME->grid,TRUE);
+        //block_buttons();
+        for(int i = 1; i < GAME->v->count; i++) 
+            gtk_widget_set_sensitive(GAME->v->data[i],TRUE);
     } 
     else if(buf[0] == '3') 
     { 
@@ -304,4 +376,38 @@ static gboolean get_move(gpointer data)
         board_to_grid(GAME);
     } 
     return TRUE;
+} 
+
+void save_button(GtkWidget *widget)
+{ 
+    GtkWidget *dialog = gtk_file_chooser_dialog_new("Save File",GTK_WINDOW(window),
+            GTK_FILE_CHOOSER_ACTION_SAVE,"_Cancel",GTK_RESPONSE_CANCEL,"_Save",GTK_RESPONSE_OK,NULL);
+    gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(dialog),"Untilted"); 
+    mkdir(".history",0777);
+    
+    gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog),"./.history");
+    gtk_widget_show_all(dialog); 
+    gint resp = gtk_dialog_run(GTK_DIALOG(dialog)); 
+    //if(gtk_widget_is_sensitive(GAME->v->data[1]) == TRUE) 
+    if(resp == GTK_RESPONSE_OK)
+    {
+        FILE *cfg; 
+        cfg = fopen(gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog)),"w");
+        int move = player; 
+        if(gtk_widget_is_sensitive(GAME->v->data[1]) == FALSE) move = 1 - move;
+        if (m_id[0] == 'A')
+            fprintf(cfg,"%d\n",player); 
+        else 
+            fprintf(cfg,"%d\n",1-player);
+        fprintf(cfg,"%d\n%d\n%s",move,GAME->board->win_cond,board_to_string(GAME->board));
+        fclose(cfg);
+        zakoncz(NULL,NULL);
+    } 
+    gtk_widget_destroy(dialog); 
+} 
+
+void block_buttons()
+{ 
+    for(int i = 1; i < GAME->v->count; i++) 
+        gtk_widget_set_sensitive(GAME->v->data[i],FALSE);
 } 

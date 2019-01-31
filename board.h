@@ -17,7 +17,7 @@ struct node
     //1 - kółko    
 };
 
-Board init(int,int); 
+Board init(int,int,int); 
 Board single_column(int,int);
 Board add_row(Board);
 Board move1(Board,int,int); 
@@ -37,4 +37,7 @@ int dir7(struct node *board, int player);
 int dir8(struct node *board, int player);
 int width(struct node*); 
 int height(struct node*);
+char *board_to_string(struct node*);
+Board load_board(char *);
+
 #endif

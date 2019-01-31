@@ -19,7 +19,7 @@ static FILE *openInPipe(char *name);
 void closePipes(PipesPtr pipes) 
 { 
   fclose(pipes->fifo_in); 
-  fclose(pipes->fifo_out); 
+  //fclose(pipes->fifo_out); 
   free(pipes); 
 }
 

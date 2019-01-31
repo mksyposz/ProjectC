@@ -3,6 +3,8 @@
 #include<string.h>
 #include<stdlib.h>
 #include<time.h>
+#include<sys/types.h>
+#include<sys/stat.h>
 
 int EXIT_CODE;
 
@@ -268,7 +270,7 @@ void check_conditions(GtkWidget *widget, struct menu_choices *X)
         if(X->pressed[2] == X->pressed[3]) 
         { 
             X->pressed[2] = rand()%2; 
-            X->pressed[3] = 1 - rand()%2;
+            X->pressed[3] = 1 - X->pressed[2];
         } 
         fprintf(cfg,"0 %d %d %d %d\n",X->pressed[0],X->pressed[1],X->pressed[2],X->pressed[3]);
         fclose(cfg); 
@@ -348,6 +350,8 @@ void load_button_action(GtkWidget *widget, struct menu_choices *X)
 { 
     GtkWidget *dialog = gtk_file_chooser_dialog_new("Open File",GTK_WINDOW(X->win),GTK_FILE_CHOOSER_ACTION_OPEN,
             "_Cancel",GTK_RESPONSE_CANCEL,"_Open",GTK_RESPONSE_OK,NULL); 
+    
+    mkdir(".history",0777);
     gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog),"./.history");
     gtk_widget_show_all(dialog); 
     gint resp = gtk_dialog_run(GTK_DIALOG(dialog)); 
@@ -358,6 +362,7 @@ void load_button_action(GtkWidget *widget, struct menu_choices *X)
         fprintf(cfg,"1 %s\n",gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog))); 
         fclose(cfg);
         gtk_widget_destroy(X->win);
+        EXIT_CODE = 0;
     } 
     gtk_widget_destroy(dialog);
 } 

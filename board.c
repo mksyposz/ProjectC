@@ -1,10 +1,10 @@
 #include"board.h"
 
-struct node *init(int size, int win_condition) 
+struct node *init(int size_w, int size_h, int win_condition) 
 { 
     struct node *prev = NULL; 
-    int h = size;
-    while(size--) 
+    int h = size_h;
+    while(size_w--) 
     { 
         struct node *new_node = single_column(h,win_condition);
         while(new_node->up != NULL) 
@@ -297,17 +297,21 @@ int check_win(struct node *board,int x)
         board = board->next; 
         id++;
     } 
+    int winner = -1;
     while(board != NULL) 
     { 
-        if(board->val == -1) return -1;
-        if(dir1(board,board->val) + dir2(board,board->val) - 1 >= board->win_cond) return board->val;
-
-        if(dir3(board,board->val) + dir4(board,board->val) - 1 >= board->win_cond) return board->val;
-        if(dir5(board,board->val) + dir6(board,board->val) - 1 >= board->win_cond) return board->val;
-        if(dir7(board,board->val) + dir8(board,board->val) - 1 >= board->win_cond) return board->val;
+        if(board->val == -1) return winner;
+        if(dir1(board,board->val) + dir2(board,board->val) - 1 >= board->win_cond ||
+            dir3(board,board->val) + dir4(board,board->val) - 1 >= board->win_cond ||
+            dir5(board,board->val) + dir6(board,board->val) - 1 >= board->win_cond ||
+            dir7(board,board->val) + dir8(board,board->val) - 1 >= board->win_cond)
+        { 
+            if(winner == -1) winner = board->val; 
+            else if(winner != board->val) winner = 2;
+        } 
         board = board->up;
     } 
-    return -1;
+    return winner;
 } 
 
 int width(struct node *board) 
@@ -331,3 +335,74 @@ int height(struct node *board)
     } 
     return res;
 } 
+
+char *board_to_string(struct node *board)
+{ 
+    char *res; 
+    res = malloc(sizeof(char) * (width(board)+1) * height(board));
+    while(board->up != NULL) board = board->up;
+    int id = 0;
+    while(board != NULL) 
+    { 
+        while(board->next != NULL) 
+        { 
+            if(board->val == -1) res[id] = ' '; 
+            else if(board->val == 0) res[id] = 'x';
+            else res[id] = 'o';
+            board = board->next;
+            id++;
+        }
+        if(board->val == -1) res[id] = ' ';
+        else if(board->val == 0) res[id] = 'x'; 
+        else res[id] = 'o';
+        id++;
+        res[id++] = '\n'; 
+
+        while(board->prev != NULL) board = board->prev;
+        board = board->down; 
+    } 
+    return res;
+} 
+
+struct node *load_board(char *path) 
+{
+    FILE *load = fopen(path,"r"); 
+    int a, b, win_cond; 
+    fscanf(load,"%d%d%d",&a,&b,&win_cond); 
+    char str[1000]; 
+    fgets(str,10,load); //end of line read
+    int w = 0, h = 0; 
+    while(feof(load) == 0)
+    { 
+        fgets(str,1000,load); 
+        if(h == 0) 
+            while(str[w] != '\0' && str[w] != '\n') w++;
+        h++;          
+    }
+    h = h - 1; //there's one more while loop to know we read EOF
+    rewind(load);
+    fscanf(load,"%d%d%d",&a,&b,&win_cond); 
+    fgets(str,10,load); //end of line read
+    struct node* board = init(w,h,win_cond);
+    struct node* ret = board;
+    while(board->up != NULL) board = board->up;
+    while(feof(load) == 0) 
+    { 
+        fgets(str,1000,load); 
+        int id = 0;
+        while(board->next != NULL) 
+        { 
+            if(str[id] == ' ') board->val = -1;
+            else if(str[id] == 'x') board->val = 0;
+            else board->val = 1;
+            id++; 
+            board = board->next;
+        } 
+        if(str[id] == ' ') board->val = -1;
+        else if(str[id] == 'x') board->val = 0;
+        else board->val = 1;
+        while(board->prev != NULL) board = board->prev; 
+        if(board->down != NULL) board = board->down; 
+    } 
+    return ret;
+}

@@ -137,6 +137,13 @@ static void zakoncz(GtkWidget *widget, gpointer data)
 
 void board_to_grid(struct game *G)
 {
+	char s[30]; 
+	if(player == 0) 
+	sprintf(s,"Your mark is x"); 
+	else 
+	sprintf(s,"Your mark is o"); 
+	GtkWidget *label = gtk_label_new(s);
+	gtk_grid_attach(GTK_GRID(G->grid),label,0,0,1,1);
     //reset grid
     for(int i = 0; i < G->v->count; i++) 
         gtk_container_remove(GTK_CONTAINER(G->grid),G->v->data[i]); 
@@ -231,6 +238,7 @@ void board_to_grid(struct game *G)
         if(G->board->next != NULL) G->board = G->board->next;
     } 
     while(G->board->prev != NULL) G->board = G->board->prev;
+	vector_add(G->v,label);
     gtk_widget_show_all(G->grid);
 } 
 

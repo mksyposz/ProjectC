@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-std=c11 -Wno-unused-variable -Wextra  -O2 $(shell pkg-config gtk+-3.0 --cflags)
+CFLAGS=-std=c11 -Wno-unused-result -Wno-unused-variable -Wextra  -O2 $(shell pkg-config gtk+-3.0 --cflags)
 
 LDFLAGS= $(shell pkg-config gtk+-3.0 --libs)
 
